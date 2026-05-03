@@ -16,6 +16,9 @@ export default function App() {
 	const [outputPath, setOutputPath] = useState('/videos/rips');
 	const [editingPath, setEditingPath] = useState(false);
   const [videoFormat, setVideoFormat] = useState('MKV');
+  const [showFinalLocation, setshowFinalLocation] = useState('//TRUENAS/media/shows');
+  const [movieFinalLocation, setmovieFinalLocation] = useState('//TRUENAS/media/movies');
+  
 
 	let navItems: Item[] = [
 		{label: '📺 Shows', value: 'shows'},
