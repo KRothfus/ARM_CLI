@@ -4,6 +4,16 @@ import SelectInput from 'ink-select-input';
 import Gradient from 'ink-gradient';
 import BigText from 'ink-big-text';
 import TextInput from 'ink-text-input';
+import * as dotenv from 'dotenv';
+
+
+const OUTPUT_FOLDER = 'OUTPUT_FOLDER';
+const VIDEO_FORMAT = 'VIDEO_FORMAT';
+const SHOWS_FINAL_PATH = 'SHOWS_FINAL_PATH';
+const MOVIES_FINAL_PATH = 'MOVIES_FINAL_PATH';
+
+dotenv.config();
+
 // 1. Simple Type Definition
 interface Item {
 	label: string;
@@ -13,15 +23,17 @@ interface Item {
 export default function App() {
 	const [activeTab, setActiveTab] = useState('shows');
 	const [isEditing, setIsEditing] = useState(false);
-	const [outputPath, setOutputPath] = useState('/videos/rips');
+	const [outputPath, setOutputPath] = useState(process.env[OUTPUT_FOLDER]);
 	const [editingOutputPath, setEditingOutputPath] = useState(false);
-const [editingVideoFormat, setEditingVideoFormat] = useState(false);
-	const [videoFormat, setVideoFormat] = useState('MKV');
+	const [editingVideoFormat, setEditingVideoFormat] = useState(false);
+	const [videoFormat, setVideoFormat] = useState(process.env[VIDEO_FORMAT]);
+  const [editingShowFinalFolder, setEditingShowFinalFolder] = useState(false);
+  const [editingMovieFinalFolder, setEditingMovieFinalFolder] = useState(false);
 	const [showFinalLocation, setshowFinalLocation] = useState(
-		'//TRUENAS/media/shows',
+		process.env[SHOWS_FINAL_PATH],
 	);
 	const [movieFinalLocation, setmovieFinalLocation] = useState(
-		'//TRUENAS/media/movies',
+		process.env[MOVIES_FINAL_PATH],
 	);
 
 	let navItems: Item[] = [
@@ -34,8 +46,8 @@ const [editingVideoFormat, setEditingVideoFormat] = useState(false);
 		if (item.value === 'settings') {
 			setIsEditing(true);
 			setActiveTab(item.value);
-		} else {
-			setActiveTab(item.value);
+    }
+      else {setActiveTab(item.value);
 		}
 	};
 
@@ -52,9 +64,15 @@ const [editingVideoFormat, setEditingVideoFormat] = useState(false);
 		if (item.label.includes('Output Folder')) {
 			setEditingOutputPath(true);
 		}
-    if (item.label.includes('Video Format')) {
+		if (item.label.includes('Video Format')) {
 			setEditingVideoFormat(true);
 		}
+    if(item.label.includes('Show Final Folder')) {
+      setEditingShowFinalFolder(true);    
+    }
+    if(item.label.includes('Movie Final Folder')) {
+      setEditingMovieFinalFolder(true);    
+    }
 	};
 	return (
 		<Box flexDirection="row" padding={1}>
@@ -106,13 +124,31 @@ const [editingVideoFormat, setEditingVideoFormat] = useState(false);
 									onSubmit={() => setEditingOutputPath(false)}
 								/>
 							</Box>
-						) : (editingVideoFormat ? (
+						) : editingVideoFormat ? (
 							<Box>
 								<Text>Video Format: </Text>
 								<TextInput
 									value={videoFormat}
 									onChange={setVideoFormat}
 									onSubmit={() => setEditingVideoFormat(false)}
+								/>
+							</Box>
+						) : editingShowFinalFolder ? (
+							<Box>
+								<Text>Show Final Folder: </Text>
+								<TextInput
+									value={showFinalLocation}
+									onChange={setshowFinalLocation}
+									onSubmit={() => setEditingShowFinalFolder(false)}
+								/>
+							</Box>
+						) : editingMovieFinalFolder ? (
+							<Box>
+								<Text> Movie Final Folder: </Text>
+								<TextInput
+									value={movieFinalLocation}
+									onChange={setmovieFinalLocation}
+									onSubmit={() => setEditingMovieFinalFolder(false)}
 								/>
 							</Box>
 						) : (
@@ -124,11 +160,19 @@ const [editingVideoFormat, setEditingVideoFormat] = useState(false);
 										value: '/videos/rips',
 									},
 									{label: `Video Format: ${videoFormat}`, value: 'format'},
+                  {
+										label: `Show Final Folder: ${showFinalLocation}`,
+										value: '/videos/rips',
+									},
+                  {
+										label: `Movie Final Folder: ${movieFinalLocation}`,
+										value: '/videos/rips',
+									},
 									{label: '🔙 Back', value: 'back'},
 								]}
 								onSelect={handleSettingsSelect}
 							/>
-						))}
+						)}
 					</Box>
 				)}
 			</Box>

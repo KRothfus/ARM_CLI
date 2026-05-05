@@ -4,3 +4,4 @@ dist
 tsconfig.json
 test.js
 test.tsx
+.env.local
