@@ -67,6 +67,7 @@ export default function App() {
 	const [movieTitle, setMovieTitle] = useState('My Movie');
 	const [editingMovieTitle, setEditingMovieTitle] = useState(false);
 	const [movieYear, setMovieYear] = useState('2024');
+	const [discDrive, setDiscDrive] = useState('0'); // Default to disc:0
 
 	let navItems: Item[] = [
 		{label: '📺  Shows', value: 'shows'},
@@ -407,8 +408,8 @@ export default function App() {
 											value: movieFinalLocation,
 										},
 										{
-											label: 'Disc Drive Info: (Not Implemented)',
-											value: `disc:${0}`,
+											label: `Disc Drive Index: ${discDrive}`,
+											value: `disc:${discDrive}`,
 										},
 										{label: '🔙 Back', value: 'back'},
 									]}
