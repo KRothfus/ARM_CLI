@@ -7,6 +7,7 @@ import TextInput from 'ink-text-input';
 import * as dotenv from 'dotenv';
 import * as fs from 'node:fs';
 import path from 'path';
+import {ripDisc} from './rip.js';
 
 const OUTPUT_FOLDER = 'OUTPUT_FOLDER';
 const VIDEO_FORMAT = 'VIDEO_FORMAT';
@@ -63,6 +64,9 @@ export default function App() {
 	const [movieFinalLocation, setmovieFinalLocation] = useState(
 		process.env[MOVIES_FINAL_PATH],
 	);
+	const [movieTitle, setMovieTitle] = useState('My Movie');
+	const [editingMovieTitle, setEditingMovieTitle] = useState(false);
+	const [movieYear, setMovieYear] = useState('2024');
 
 	let navItems: Item[] = [
 		{label: '📺  Shows', value: 'shows'},
@@ -74,8 +78,36 @@ export default function App() {
 		if (item.value === 'settings') {
 			setIsEditing(true);
 			setActiveTab(item.value);
-		} else {
+		} else if (item.value === 'shows') {
+			setIsEditing(true);
 			setActiveTab(item.value);
+		} else {
+			setIsEditing(true);
+			setActiveTab(item.value);
+		}
+	};
+
+	const handleShowsSelect = (item: Item) => {
+		if (item.value === 'back') {
+			setIsEditing(false);
+			setActiveTab('shows'); // Default back to shows tab
+			navItems = [
+				{label: '📺 Shows', value: 'shows'},
+				{label: '🎬 Movies', value: 'movies'},
+				{label: '🔧  Settings', value: 'settings'},
+			]; // Restore original nav items
+		}
+	};
+
+	const handleMoviesSelect = (item: Item) => {
+		if (item.value === 'back') {
+			setIsEditing(false);
+			setActiveTab('shows'); // Default back to shows tab
+			navItems = [
+				{label: '📺 Shows', value: 'shows'},
+				{label: '🎬 Movies', value: 'movies'},
+				{label: '🔧  Settings', value: 'settings'},
+			]; // Restore original nav items
 		}
 	};
 
@@ -104,6 +136,30 @@ export default function App() {
 		}
 		if (item.label.includes('Movie Final Folder')) {
 			setEditingMovieFinalFolder(true);
+		}
+	};
+
+	const handleShowsSubmit = (item: Item) => {
+		if (item.value === 'back') {
+			setIsEditing(false);
+			setActiveTab('shows'); // Default back to shows tab
+			navItems = [
+				{label: '📺 Shows', value: 'shows'},
+				{label: '🎬 Movies', value: 'movies'},
+				{label: '🔧  Settings', value: 'settings'},
+			]; // Restore original nav items
+		}
+	};
+
+	const handleMoviesSubmit = (item: Item) => {
+		if (item.value === 'back') {
+			setIsEditing(false);
+			setActiveTab('movies'); // Default back to shows tab
+			navItems = [
+				{label: '📺 Shows', value: 'shows'},
+				{label: '🎬 Movies', value: 'movies'},
+				{label: '🔧  Settings', value: 'settings'},
+			]; // Restore original nav items
 		}
 	};
 
@@ -159,18 +215,110 @@ export default function App() {
 			>
 				<Box flexDirection="column" flexGrow={1}>
 					{activeTab === 'shows' && (
-						<View
-							title="SHOWS"
-							color="retro"
-							desc="Scan titles for TV Series..."
-						/>
+						<Box marginTop={1}>
+							<View
+								title="SHOWS"
+								color="rainbow"
+								desc="Ready to rip feature film..."
+							/>
+							<Text color="yellow">
+								⚠️ Show ripping is experimental. Use with caution.
+							</Text>
+						</Box>
 					)}
 					{activeTab === 'movies' && (
-						<View
-							title="MOVIES"
-							color="rainbow"
-							desc="Ready to rip feature film..."
-						/>
+						<Box flexDirection="column" width="100%">
+							<Box
+								borderStyle="single"
+								justifyContent="center"
+								width="100%"
+								marginBottom={1}
+							>
+								<Text bold color="cyan">
+									{' '}
+									Movies{' '}
+								</Text>
+							</Box>
+							{editingMovieTitle ? (
+								<Box>
+									<Text>Movie Title: </Text>
+									<TextInput
+										value={movieTitle}
+										onChange={setMovieTitle}
+										onSubmit={() =>
+											handleSettingSubmit({
+												label: `Movie Title: ${movieTitle}`,
+												value: movieTitle,
+											})
+										}
+									/>
+								</Box>
+							) : editingOutputPath ? (
+								<Box>
+									<Text>Output Folder: </Text>
+									{/* <TextInput
+										value={outputPath}
+										onChange={setOutputPath}
+										onSubmit={() =>
+											handleSettingSubmit({
+												label: `Output Folder: ${outputPath}`,
+												value: outputPath,
+											})
+										}
+									/> */}
+								</Box>
+							) : editingVideoFormat ? (
+								<Box>
+									<Text>Video Format: </Text>
+									<TextInput
+										value={videoFormat}
+										onChange={setVideoFormat}
+										onSubmit={() =>
+											handleSettingSubmit({
+												label: `Video Format: ${videoFormat}`,
+												value: videoFormat,
+											})
+										}
+									/>
+								</Box>
+							
+							) : editingMovieFinalFolder ? (
+								<Box>
+									<Text> Movie Final Folder: </Text>
+									<TextInput
+										value={movieFinalLocation}
+										onChange={setmovieFinalLocation}
+										onSubmit={() =>
+											handleSettingSubmit({
+												label: `Movie Final Folder: ${movieFinalLocation}`,
+												value: movieFinalLocation,
+											})
+										}
+									/>
+								</Box>
+							) : (
+								<SelectInput
+									isFocused={activeTab === 'movies'}
+									items={[
+										{
+											label: `Movie Title: ${movieTitle}`,
+											value: movieTitle,
+										},
+										{
+											label: `Movie Final Folder: ${movieFinalLocation}`,
+											value: movieFinalLocation,
+										},
+										{ label: 'Movie Year: ${movieYear}', value: movieYear },
+										{
+											label: 'RIP!',
+											value: 'ripIT!',
+										},
+										{label: '🔙 Back', value: 'back'},
+									]}
+									onSelect={handleSettingsSelect}
+								/>
+							)}
+						</Box>
 					)}
 					{activeTab === 'settings' && (
 						<Box flexDirection="column" width="100%">
@@ -258,6 +406,10 @@ export default function App() {
 											label: `Movie Final Folder: ${movieFinalLocation}`,
 											value: movieFinalLocation,
 										},
+										{
+											label: 'Disc Drive Info: (Not Implemented)',
+											value: `disc:${0}`,
+										},
 										{label: '🔙 Back', value: 'back'},
 									]}
 									onSelect={handleSettingsSelect}
@@ -291,14 +443,14 @@ function View({
 }) {
 	return (
 		<Box flexDirection="column" width="100%">
-		<Box width='100%' overflow='hidden'>
-			<Gradient name={color}>
-				<BigText text={title} font="tiny" />
-			</Gradient>
-			<Text italic color="gray">
-				{desc}
-			</Text>
-		</Box>
+			<Box width="100%" overflow="hidden">
+				<Gradient name={color}>
+					<BigText text={title} font="tiny" />
+				</Gradient>
+				<Text italic color="gray">
+					{desc}
+				</Text>
+			</Box>
 		</Box>
 	);
 }
