@@ -411,7 +411,7 @@ export default function App() {
 											label: `Disc Drive Index: ${discDrive}`,
 											value: `disc:${discDrive}`,
 										},
-										{label: '🔙 Back', value: 'back'},
+										{label: '🔙', value: 'back'},
 									]}
 									onSelect={handleSettingsSelect}
 								/>
