@@ -1,6 +1,9 @@
 import {exec} from 'child_process';
 import {promisify} from 'util';
 
+// makemkvcon -r mkv disc:0 0 "G:/Video" && echo 'Ripping done!'
+// handbrake -i "G:/Video/A1_t00.mkv" -o "//TRUENAS/media/movies/Lady and the Tramp.mp4" --preset "Fast 1080p30"
+
 const execAsync = promisify(exec);
 
 export async function getFiles() {
@@ -25,3 +28,4 @@ export async function ripDisc(destinationFolder: string){
         throw error;
     }
 }
+

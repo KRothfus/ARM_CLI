@@ -13,6 +13,8 @@ const OUTPUT_FOLDER = 'OUTPUT_FOLDER';
 const VIDEO_FORMAT = 'VIDEO_FORMAT';
 const SHOWS_FINAL_PATH = 'SHOWS_FINAL_PATH';
 const MOVIES_FINAL_PATH = 'MOVIES_FINAL_PATH';
+const MAKEMKV_PATH = 'MAKEMKV_PATH';
+const HANDBRAKE_PATH = 'HANDBRAKE_PATH';
 
 dotenv.config({path: '.env.local'});
 const ENV_PATH = path.resolve(process.cwd(), '.env.local');
@@ -68,7 +70,15 @@ export default function App() {
 	const [editingMovieTitle, setEditingMovieTitle] = useState(false);
 	const [movieYear, setMovieYear] = useState('2024');
 	const [discDrive, setDiscDrive] = useState('0'); // Default to disc:0
-
+	const [editingDiscDrive, setEditingDiscDrive] = useState(false);
+	const [editingHandBrakePath, setEditingHandBrakePath] = useState(false);
+	const [editingMakeMKVPath, setEditingMakeMKVPath] = useState(false);
+	const [handbrakePath, setHandbrakePath] = useState(
+		process.env[HANDBRAKE_PATH] || 'handbrake',
+	);
+	const [makemkvPath, setMakemkvPath] = useState(
+		process.env[MAKEMKV_PATH] || 'makemkvcon',
+	);
 	let navItems: Item[] = [
 		{label: '📺  Shows', value: 'shows'},
 		{label: '🎬  Movies', value: 'movies'},
@@ -138,6 +148,15 @@ export default function App() {
 		if (item.label.includes('Movie Final Folder')) {
 			setEditingMovieFinalFolder(true);
 		}
+		if (item.label.includes('Disc Drive')) {
+			setEditingDiscDrive(true);
+		}
+		if (item.label.includes('HandBrakeCLI Path')) {
+			setEditingHandBrakePath(true);
+		}
+		if (item.label.includes('MakeMKV Path')) {
+			setEditingMakeMKVPath(true);
+		}
 	};
 
 	const handleShowsSubmit = (item: Item) => {
@@ -188,6 +207,24 @@ export default function App() {
 			process.env[MOVIES_FINAL_PATH] = movieFinalLocation; // Update process.env for current session
 			saveToEnvFile(MOVIES_FINAL_PATH, movieFinalLocation); // Update .env.local
 			setEditingMovieFinalFolder(false);
+		}
+		if (item.label.includes('Disc Drive')) {
+			setDiscDrive(discDrive); // Update state
+			process.env[`DISC_DRIVE`] = discDrive; // Update process.env for current session
+			saveToEnvFile(`DISC_DRIVE`, discDrive); // Update .env.local
+			setEditingDiscDrive(false);
+		}
+		if (item.label.includes('HandBrakeCLI Path')) {
+			setHandbrakePath(handbrakePath); // Update state
+			process.env[HANDBRAKE_PATH] = handbrakePath; // Update process.env for current session
+			saveToEnvFile(HANDBRAKE_PATH, handbrakePath); // Update .env.local
+			setEditingHandBrakePath(false);
+		}
+		if (item.label.includes('MakeMKV Path')) {
+			setMakemkvPath(makemkvPath); // Update state
+			process.env[MAKEMKV_PATH] = makemkvPath; // Update process.env for current session
+			saveToEnvFile(MAKEMKV_PATH, makemkvPath); // Update .env.local
+			setEditingMakeMKVPath(false);
 		}
 	};
 	return (
@@ -282,7 +319,6 @@ export default function App() {
 										}
 									/>
 								</Box>
-							
 							) : editingMovieFinalFolder ? (
 								<Box>
 									<Text> Movie Final Folder: </Text>
@@ -309,7 +345,7 @@ export default function App() {
 											label: `Movie Final Folder: ${movieFinalLocation}`,
 											value: movieFinalLocation,
 										},
-										{ label: 'Movie Year: ${movieYear}', value: movieYear },
+										{label: 'Movie Year: ${movieYear}', value: `${movieYear}`},
 										{
 											label: 'RIP!',
 											value: 'ripIT!',
@@ -390,6 +426,48 @@ export default function App() {
 										}
 									/>
 								</Box>
+							) : editingDiscDrive ? (
+								<Box>
+									<Text>Disc Drive Index: </Text>
+									<TextInput
+										value={discDrive}
+										onChange={setDiscDrive}
+										onSubmit={() =>
+											handleSettingSubmit({
+												label: `Disc Drive Index: ${discDrive}`,
+												value: discDrive,
+											})
+										}
+									/>
+								</Box>
+							) : editingHandBrakePath ? (
+								<Box>
+									<Text>HandBrakeCLI Path: </Text>
+									<TextInput
+										value={handbrakePath}
+										onChange={setHandbrakePath}
+										onSubmit={() =>
+											handleSettingSubmit({
+												label: `HandBrakeCLI Path: ${handbrakePath}`,
+												value: handbrakePath,
+											})
+										}
+									/>
+								</Box>
+							) : editingMakeMKVPath ? (
+								<Box>
+									<Text>MakeMKV Path: </Text>
+									<TextInput
+										value={makemkvPath}
+										onChange={setMakemkvPath}
+										onSubmit={() =>
+											handleSettingSubmit({
+												label: `MakeMKV Path: ${makemkvPath}`,
+												value: makemkvPath,
+											})
+										}
+									/>
+								</Box>
 							) : (
 								<SelectInput
 									isFocused={activeTab === 'settings'}
@@ -410,6 +488,14 @@ export default function App() {
 										{
 											label: `Disc Drive Index: ${discDrive}`,
 											value: `disc:${discDrive}`,
+										},
+										{
+											label: `HandBrakeCLI Path: ${handbrakePath}`,
+											value: `${handbrakePath}`,
+										},
+										{
+											label: `MakeMKV Path: ${makemkvPath}`,
+											value: `${makemkvPath}`,
 										},
 										{label: '🔙', value: 'back'},
 									]}
