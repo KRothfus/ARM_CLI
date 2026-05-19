@@ -6,9 +6,9 @@ import {promisify} from 'util';
 
 const execAsync = promisify(exec);
 
-export async function getFiles() {
+export async function openDisc(discDrive: number) {
     try {
-        const { stdout, stderr } = await execAsync('makemkvcon -r info disc:0');
+        const { stdout, stderr } = await execAsync(`makemkvcon -r info disc:${discDrive}`);
         console.log('Movie Info:', stdout);
         return stdout;
     } catch (error) {
@@ -17,9 +17,9 @@ export async function getFiles() {
     }
 }
 
-export async function ripDisc(destinationFolder: string){
+export async function ripDisc(movieTitle, movieYear, discDrive, makemkvPath, handbrakePath, outputPath, videoFormat, movieFinalLocation){
     try {
-        const command = `makemkvcon mkv disc:0 all "${destinationFolder}"`;
+        const command = `makemkvcon mkv disc:${discDrive} 0 "${movieFinalLocation}"`;
         const { stdout, stderr } = await execAsync(command);
         console.log('Rip Output:', stdout);
         return stdout;

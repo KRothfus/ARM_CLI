@@ -157,6 +157,9 @@ export default function App() {
 		if (item.label.includes('MakeMKV Path')) {
 			setEditingMakeMKVPath(true);
 		}
+		if (item.label.includes('Movie Title')) {
+			setEditingMovieTitle(true);
+		}
 	};
 
 	const handleShowsSubmit = (item: Item) => {
@@ -183,7 +186,7 @@ export default function App() {
 		}
 	};
 
-	const handleSettingSubmit = (item: Item) => {
+	const handleSubmit = (item: Item) => {
 		if (item.label.includes('Output Folder')) {
 			setOutputPath(outputPath); // Update state
 			process.env[OUTPUT_FOLDER] = outputPath; // Update process.env for current session
@@ -225,6 +228,30 @@ export default function App() {
 			process.env[MAKEMKV_PATH] = makemkvPath; // Update process.env for current session
 			saveToEnvFile(MAKEMKV_PATH, makemkvPath); // Update .env.local
 			setEditingMakeMKVPath(false);
+		}
+		if (item.label.includes('Movie Title')) {
+			setMovieTitle(movieTitle); // Update state
+			setEditingMovieTitle(false);
+		}
+		if (item.label.includes('Movie Year')) {
+			setMovieYear(movieYear); // Update state
+			setEditingMovieTitle(false);
+		}
+		if (item.label.includes('Open Disc')) {
+			// openDisc(discDrive).then(() => {
+			// 	// Handle completion
+			// }).catch((error) => {
+			// 	// Handle error
+			// 	console.error('Error opening disc:', error);
+			// });
+		}
+		if (item.value === 'ripIT!') {
+			ripDisc(movieTitle, movieYear, discDrive, makemkvPath, handbrakePath, outputPath, videoFormat, movieFinalLocation).then(() => {
+				// Handle completion
+			}).catch((error) => {
+				// Handle error
+				console.error('Error during ripping process:', error);
+			});
 		}
 	};
 	return (
@@ -284,7 +311,7 @@ export default function App() {
 										value={movieTitle}
 										onChange={setMovieTitle}
 										onSubmit={() =>
-											handleSettingSubmit({
+											handleSubmit({
 												label: `Movie Title: ${movieTitle}`,
 												value: movieTitle,
 											})
@@ -312,7 +339,7 @@ export default function App() {
 										value={videoFormat}
 										onChange={setVideoFormat}
 										onSubmit={() =>
-											handleSettingSubmit({
+											handleSubmit({
 												label: `Video Format: ${videoFormat}`,
 												value: videoFormat,
 											})
@@ -326,7 +353,7 @@ export default function App() {
 										value={movieFinalLocation}
 										onChange={setmovieFinalLocation}
 										onSubmit={() =>
-											handleSettingSubmit({
+											handleSubmit({
 												label: `Movie Final Folder: ${movieFinalLocation}`,
 												value: movieFinalLocation,
 											})
@@ -345,12 +372,18 @@ export default function App() {
 											label: `Movie Final Folder: ${movieFinalLocation}`,
 											value: movieFinalLocation,
 										},
-										{label: 'Movie Year: ${movieYear}', value: `${movieYear}`},
+										{	label: `Movie Year: ${movieYear}`, 
+											value: movieYear
+										},
+										{	label: 'Open Disc', 
+											value: 'openDisc'
+										},
 										{
 											label: 'RIP!',
 											value: 'ripIT!',
 										},
-										{label: '🔙 Back', value: 'back'},
+										{	label: '🔙 Back', 
+											value: 'back'},
 									]}
 									onSelect={handleSettingsSelect}
 								/>
@@ -377,7 +410,7 @@ export default function App() {
 										value={outputPath}
 										onChange={setOutputPath}
 										onSubmit={() =>
-											handleSettingSubmit({
+											handleSubmit({
 												label: `Output Folder: ${outputPath}`,
 												value: outputPath,
 											})
@@ -391,7 +424,7 @@ export default function App() {
 										value={videoFormat}
 										onChange={setVideoFormat}
 										onSubmit={() =>
-											handleSettingSubmit({
+											handleSubmit({
 												label: `Video Format: ${videoFormat}`,
 												value: videoFormat,
 											})
@@ -405,7 +438,7 @@ export default function App() {
 										value={showsFinalLocation}
 										onChange={setshowsFinalLocation}
 										onSubmit={() =>
-											handleSettingSubmit({
+											handleSubmit({
 												label: `Show Final Folder: ${showsFinalLocation}`,
 												value: showsFinalLocation,
 											})
@@ -419,7 +452,7 @@ export default function App() {
 										value={movieFinalLocation}
 										onChange={setmovieFinalLocation}
 										onSubmit={() =>
-											handleSettingSubmit({
+											handleSubmit({
 												label: `Movie Final Folder: ${movieFinalLocation}`,
 												value: movieFinalLocation,
 											})
@@ -433,7 +466,7 @@ export default function App() {
 										value={discDrive}
 										onChange={setDiscDrive}
 										onSubmit={() =>
-											handleSettingSubmit({
+											handleSubmit({
 												label: `Disc Drive Index: ${discDrive}`,
 												value: discDrive,
 											})
@@ -447,7 +480,7 @@ export default function App() {
 										value={handbrakePath}
 										onChange={setHandbrakePath}
 										onSubmit={() =>
-											handleSettingSubmit({
+											handleSubmit({
 												label: `HandBrakeCLI Path: ${handbrakePath}`,
 												value: handbrakePath,
 											})
@@ -461,7 +494,7 @@ export default function App() {
 										value={makemkvPath}
 										onChange={setMakemkvPath}
 										onSubmit={() =>
-											handleSettingSubmit({
+											handleSubmit({
 												label: `MakeMKV Path: ${makemkvPath}`,
 												value: makemkvPath,
 											})
