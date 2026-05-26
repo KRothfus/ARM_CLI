@@ -7,7 +7,8 @@ import TextInput from 'ink-text-input';
 import * as dotenv from 'dotenv';
 import * as fs from 'node:fs';
 import path from 'path';
-import {ripDisc} from './rip.js';
+import {openDisc, ripDisc} from './rip.js';
+import {parse} from 'node:path';
 
 const OUTPUT_FOLDER = 'OUTPUT_FOLDER';
 const VIDEO_FORMAT = 'VIDEO_FORMAT';
@@ -15,8 +16,35 @@ const SHOWS_FINAL_PATH = 'SHOWS_FINAL_PATH';
 const MOVIES_FINAL_PATH = 'MOVIES_FINAL_PATH';
 const MAKEMKV_PATH = 'MAKEMKV_PATH';
 const HANDBRAKE_PATH = 'HANDBRAKE_PATH';
+const envTemplatePath = path.resolve(process.cwd(), '.env.template');
+const envLocalPath = path.resolve(process.cwd(), '.env.local');
 
-dotenv.config({path: '.env.local'});
+if (!fs.existsSync(envTemplatePath)) {
+	fs.writeFileSync(
+		envTemplatePath,
+		'# Add your default template keys here\nPORT=3000\n',
+	);
+	console.log('.env.template created with default content.');
+}
+
+try {
+	fs.copyFileSync(envTemplatePath, envLocalPath, fs.constants.COPYFILE_EXCL);
+	console.log('.env.local created from .env.template');
+} catch (error: any) {
+	if (error.code === 'EEXIST') {
+		console.log('.env.local already exists, skipping creation.');
+	} else {
+		console.error('Error copying to .env.local:', error);
+	}
+}
+
+const result = dotenv.config({path: envLocalPath});
+
+if (result.error) {
+	console.error('Error loading .env.local:', result.error);
+} else {
+	console.log('.env.local loaded successfully.');
+}
 const ENV_PATH = path.resolve(process.cwd(), '.env.local');
 
 // 1. Simple Type Definition
@@ -51,6 +79,50 @@ const saveToEnvFile = (key: string, value: string) => {
 	fs.writeFileSync(ENV_PATH, newLines.filter(Boolean).join('\n').trim() + '\n');
 };
 
+function discContentHandler(discContent: string){
+	return discContent.split('\n').map(line => {
+		const match = line.match(/^\s*Title\s+(\d+):\s+(.*)$/);
+		if (match) {
+			const titleNumber = match[1];
+			const titleName = match[2];
+			console.log(`Title ${titleNumber}: ${titleName}`);
+		}
+	});
+ }
+
+
+
+
+const RipMovie = () => {
+	// Mark this callback as async to allow the use of await inside it
+	let handledDiscContent = []
+	useInput(async (input, key) => {
+		if (input === 'r') {
+			openDisc(0).catch(error => {
+				console.error('Error opening disc:', error);
+			});
+		}
+
+		if (key.return) {
+			const discContent = await openDisc(0).catch(error => {
+				console.error('Error opening disc:', error);
+			});
+			
+			if (typeof discContent === 'string') {
+				handledDiscContent = discContentHandler(discContent);
+			}
+		}
+	}); // Closed the useInput hook correctly here
+
+	return (
+		<Box flexDirection="column" padding={1}>
+			<Text color="green">Ripping in progress...</Text>
+			<Text color="yellow">This may take a while. Please wait. {handledDiscContent} titles found.</Text>
+		</Box>
+	);
+};
+
+
 export default function App() {
 	const [activeTab, setActiveTab] = useState('shows');
 	const [isEditing, setIsEditing] = useState(false);
@@ -79,6 +151,8 @@ export default function App() {
 	const [makemkvPath, setMakemkvPath] = useState(
 		process.env[MAKEMKV_PATH] || 'makemkvcon',
 	);
+	const [rippingMovie, setRippingMovie] = useState(false);
+	const [editingMovieYear, setEditingMovieYear] = useState(false);
 	let navItems: Item[] = [
 		{label: '📺  Shows', value: 'shows'},
 		{label: '🎬  Movies', value: 'movies'},
@@ -129,6 +203,11 @@ export default function App() {
 			setEditingVideoFormat(false);
 			setEditingShowFinalFolder(false);
 			setEditingMovieFinalFolder(false);
+			setEditingDiscDrive(false);
+			setEditingHandBrakePath(false);
+			setEditingMakeMKVPath(false);
+			setEditingMovieTitle(false);
+			setRippingMovie(false);
 			setActiveTab('shows'); // Default back to shows tab
 			navItems = [
 				{label: '📺 Shows', value: 'shows'},
@@ -160,6 +239,9 @@ export default function App() {
 		if (item.label.includes('Movie Title')) {
 			setEditingMovieTitle(true);
 		}
+		if (item.label.includes('Movie Year')) {
+			setEditingMovieYear(true);
+		}
 	};
 
 	const handleShowsSubmit = (item: Item) => {
@@ -183,6 +265,19 @@ export default function App() {
 				{label: '🎬 Movies', value: 'movies'},
 				{label: '🔧  Settings', value: 'settings'},
 			]; // Restore original nav items
+		}
+		if (item.value === 'ripIT!') {
+			setRippingMovie(true);
+			openDisc(parseInt(discDrive));
+		}
+		if (item.label.includes('Movie Title')) {
+			setEditingMovieTitle(true);
+		}
+		if (item.label.includes('Movie Final Folder')) {
+			setEditingMovieFinalFolder(true);
+		}
+		if (item.label.includes('Movie Year')) {
+			setEditingMovieYear(true);
 		}
 	};
 
@@ -234,24 +329,48 @@ export default function App() {
 			setEditingMovieTitle(false);
 		}
 		if (item.label.includes('Movie Year')) {
+			if (
+				movieYear.trim() === '' ||
+				isNaN(Number(movieYear)) ||
+				Number(movieYear) < 1888 ||
+				Number(movieYear) > new Date().getFullYear() + 1
+			) {
+				console.error(
+					'Invalid year. Please enter a valid year between 1888 and next year.',
+				);
+				return;
+			}
 			setMovieYear(movieYear); // Update state
 			setEditingMovieTitle(false);
 		}
 		if (item.label.includes('Open Disc')) {
-			// openDisc(discDrive).then(() => {
-			// 	// Handle completion
-			// }).catch((error) => {
-			// 	// Handle error
-			// 	console.error('Error opening disc:', error);
-			// });
+			openDisc(parseInt(discDrive))
+				.then(() => {
+					// Handle completion
+				})
+				.catch(error => {
+					// Handle error
+					console.error('Error opening disc:', error);
+				});
 		}
 		if (item.value === 'ripIT!') {
-			ripDisc(movieTitle, movieYear, discDrive, makemkvPath, handbrakePath, outputPath, videoFormat, movieFinalLocation).then(() => {
-				// Handle completion
-			}).catch((error) => {
-				// Handle error
-				console.error('Error during ripping process:', error);
-			});
+			ripDisc(
+				movieTitle,
+				movieYear,
+				discDrive,
+				makemkvPath,
+				handbrakePath,
+				outputPath,
+				videoFormat,
+				movieFinalLocation,
+			)
+				.then(() => {
+					// Handle completion
+				})
+				.catch(error => {
+					// Handle error
+					console.error('Error during ripping process:', error);
+				});
 		}
 	};
 	return (
@@ -318,6 +437,20 @@ export default function App() {
 										}
 									/>
 								</Box>
+							) : editingMovieYear ? (
+								<Box>
+									<Text>Movie Year: </Text>
+									<TextInput
+										value={movieYear}
+										onChange={setMovieYear}
+										onSubmit={() =>
+											handleSubmit({
+												label: `Movie Year: ${movieYear}`,
+												value: movieYear,
+											})
+										}
+									/>
+								</Box>
 							) : editingOutputPath ? (
 								<Box>
 									<Text>Output Folder: </Text>
@@ -360,6 +493,11 @@ export default function App() {
 										}
 									/>
 								</Box>
+							) : rippingMovie ? (
+								<Box>
+									<Text color="green">Opening Disc in progress...</Text>
+									<RipMovie/>
+								</Box>
 							) : (
 								<SelectInput
 									isFocused={activeTab === 'movies'}
@@ -372,20 +510,15 @@ export default function App() {
 											label: `Movie Final Folder: ${movieFinalLocation}`,
 											value: movieFinalLocation,
 										},
-										{	label: `Movie Year: ${movieYear}`, 
-											value: movieYear
-										},
-										{	label: 'Open Disc', 
-											value: 'openDisc'
-										},
+										{label: `Movie Year: ${movieYear}`, value: movieYear},
+										{label: 'Open Disc', value: 'openDisc'},
 										{
 											label: 'RIP!',
 											value: 'ripIT!',
 										},
-										{	label: '🔙 Back', 
-											value: 'back'},
+										{label: '🔙 Back', value: 'back'},
 									]}
-									onSelect={handleSettingsSelect}
+									onSelect={handleMoviesSubmit}
 								/>
 							)}
 						</Box>
