@@ -1,19 +1,35 @@
-import {exec} from 'child_process';
+import {exec, execFile, execFileSync} from 'child_process';
+// Define DiscInfo type
+type DiscInfo = {
+    id: number;
+    name: string;
+    tracks: number;
+};
 import {promisify} from 'util';
+import dotenv from 'dotenv';
+import path from 'path';
+import os from 'os';
+import fs from 'fs/promises';
 
+
+const envLocalPath = path.resolve(process.cwd(), '.env.local');
 // makemkvcon -r mkv disc:0 0 "G:/Video" && echo 'Ripping done!'
 // handbrake -i "G:/Video/A1_t00.mkv" -o "//TRUENAS/media/movies/Lady and the Tramp.mp4" --preset "Fast 1080p30"
-
+dotenv.config({path: envLocalPath});
 const execAsync = promisify(exec);
+const MAKEMKV_KEY = process.env[`MAKEMKV_KEY`]
 
-export async function openDisc(discDrive: number): Promise<string> {
-    try {
-        const { stdout, stderr } = await execAsync(`makemkvcon -r info disc:${discDrive}`);
-        console.log('Movie Info:', stdout);
-        return stdout;
+export async function openDisc(discDrive: number): Promise<DiscInfo[]> {
+   try {
+        // --messages=-stdout forces the output to be readable
+        const { stdout } = await execAsync(`makemkvcon -r --messages=-stdout info disc:${discDrive}`);
+        console.log(stdout);
+        
+        // Custom parsing logic based on makemkvcon output would go here
+        return [{ id: 0, name: "Sample Disc", tracks: 5 }];
     } catch (error) {
-        console.error('Error fetching movie info:', error);
-        throw error;
+        console.error("Failed to fetch disc info:", error);
+        return [];
     }
 }
 

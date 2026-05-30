@@ -489,7 +489,7 @@ export default function App() {
 											handleSubmit({
 												label: `Movie Final Folder: ${movieFinalLocation}`,
 												value: movieFinalLocation,
-											})
+											})										
 										}
 									/>
 								</Box>
