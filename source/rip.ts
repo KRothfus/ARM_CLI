@@ -19,17 +19,33 @@ dotenv.config({path: envLocalPath});
 const execAsync = promisify(exec);
 const MAKEMKV_KEY = process.env[`MAKEMKV_KEY`]
 
-export async function openDisc(discDrive: number): Promise<DiscInfo[]> {
-   try {
-        // --messages=-stdout forces the output to be readable
-        const { stdout } = await execAsync(`makemkvcon -r --messages=-stdout info disc:${discDrive}`);
-        console.log(stdout);
+// export async function openDisc(discDrive: number): Promise<DiscInfo[]> {
+//    try {
+//         // --messages=-stdout forces the output to be readable
+//         const { stdout } = await execAsync(`"${MAKEMKV_KEY}" -r info disc:${discDrive}`);
+//         console.log(stdout);
         
-        // Custom parsing logic based on makemkvcon output would go here
-        return [{ id: 0, name: "Sample Disc", tracks: 5 }];
-    } catch (error) {
-        console.error("Failed to fetch disc info:", error);
-        return [];
+//         // Custom parsing logic based on makemkvcon output would go here
+//         return [{ id: 0, name: "Sample Disc", tracks: 5 }];
+//     } catch (error) {
+//         console.error("Failed to fetch disc info:", error);
+//         return [];
+//     }
+// }
+
+export async function openDisc(discDrive: number): Promise<string> {
+    try {
+        // Double-check your MAKEMKV_KEY path variable
+        const { stdout } = await execAsync(`"${MAKEMKV_KEY}" -r info disc:${discDrive}`);
+        
+        // Return the raw stdout string for your handler to parse
+        return stdout; 
+    } catch (error: any) {
+        // 2. Log out the full error structure to see why execution failed
+        console.error("Exec failed details:", error.message || error);
+        
+        // Return an empty string so your component knows nothing was found
+        return "";
     }
 }
 

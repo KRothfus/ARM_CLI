@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {Box, Text, useInput} from 'ink';
 import SelectInput from 'ink-select-input';
 import Gradient from 'ink-gradient';
@@ -79,7 +79,7 @@ const saveToEnvFile = (key: string, value: string) => {
 	fs.writeFileSync(ENV_PATH, newLines.filter(Boolean).join('\n').trim() + '\n');
 };
 
-function discContentHandler(discContent: string){
+function discContentHandler(discContent: string) {
 	return discContent.split('\n').map(line => {
 		const match = line.match(/^\s*Title\s+(\d+):\s+(.*)$/);
 		if (match) {
@@ -88,43 +88,95 @@ function discContentHandler(discContent: string){
 			console.log(`Title ${titleNumber}: ${titleName}`);
 		}
 	});
- }
+}
 
+// const RipMovie =  () => {
+// 	// Mark this callback as async to allow the use of await inside it
+// 	let handledDiscContent = [];
 
+// 	const discContent =  openDisc(0).catch(error => {
+// 		console.error('Error opening disc:', error);
+// 	});
 
+// 	// const discContent = await openDisc(0).catch(error => {
+// 	// 	console.error('Error opening disc:', error);
+// 	// });
 
-const RipMovie = () => {
-	// Mark this callback as async to allow the use of await inside it
-	let handledDiscContent = []
-	useInput(async (input, key) => {
-		if (input === 'r') {
-			openDisc(0).catch(error => {
+// 	if (typeof discContent === 'string') {
+// 		handledDiscContent = discContentHandler(discContent);
+// 	}
+
+// 	return (
+// 		<Box flexDirection="column" padding={1}>
+// 			<Text color="green">Ripping in progress...</Text>
+// 			<Text color="yellow">
+// 				This may take a while. Please wait. {handledDiscContent} titles found.
+// 			</Text>
+// 		</Box>
+// 	);
+// };
+
+export const RipMovie = () => {
+	// 1. Manage your async data, loading state, and errors in state hooks
+	const [handledDiscContent, setHandledDiscContent] = useState<any[]>([]);
+	const [isLoading, setIsLoading] = useState<boolean>(true);
+	const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+	// 2. Isolate the async operation inside useEffect so it runs exactly once
+	useEffect(() => {
+		const runDiscExtraction = async () => {
+			try {
+				setIsLoading(true);
+				
+				// Await the async data here safely
+				const discContent = await openDisc(0);
+
+				if (typeof discContent === 'string') {
+					const handled = discContentHandler(discContent);
+					setHandledDiscContent(handled);
+				}
+			} catch (error) {
 				console.error('Error opening disc:', error);
-			});
-		}
-
-		if (key.return) {
-			const discContent = await openDisc(0).catch(error => {
-				console.error('Error opening disc:', error);
-			});
-			
-			if (typeof discContent === 'string') {
-				handledDiscContent = discContentHandler(discContent);
+				setErrorMsg('Failed to read media disc container.');
+			} finally {
+				setIsLoading(false);
 			}
-		}
-	}); // Closed the useInput hook correctly here
+		};
 
+		runDiscExtraction();
+	}, []); // Empty dependency array ensures this only executes on mount
+
+	// 3. Render a loading state while waiting for the Promise to resolve
+	if (isLoading) {
+		return (
+			<Box flexDirection="column" padding={1}>
+				<Text color="yellow">🔍 Scanning disc drives, please wait...</Text>
+			</Box>
+		);
+	}
+
+	// 4. Render an error screen if the extraction failed
+	if (errorMsg) {
+		return (
+			<Box flexDirection="column" padding={1}>
+				<Text color="red">❌ {errorMsg}</Text>
+			</Box>
+		);
+	}
+
+	// 5. Render your final output layout screen
 	return (
 		<Box flexDirection="column" padding={1}>
 			<Text color="green">Ripping in progress...</Text>
-			<Text color="yellow">This may take a while. Please wait. {handledDiscContent} titles found.</Text>
+			<Text color="yellow">
+				This may take a while. Please wait. {handledDiscContent.length} titles found.
+			</Text>
 		</Box>
 	);
 };
 
-
 export default function App() {
-	const [activeTab, setActiveTab] = useState('shows');
+	const [activeTab, setActiveTab] = useState('');
 	const [isEditing, setIsEditing] = useState(false);
 	const [outputPath, setOutputPath] = useState(process.env[OUTPUT_FOLDER]);
 	const [editingOutputPath, setEditingOutputPath] = useState(false);
@@ -153,6 +205,8 @@ export default function App() {
 	);
 	const [rippingMovie, setRippingMovie] = useState(false);
 	const [editingMovieYear, setEditingMovieYear] = useState(false);
+	const [highlightedTab, setHighlightedTab] = useState('shows');
+
 	let navItems: Item[] = [
 		{label: '📺  Shows', value: 'shows'},
 		{label: '🎬  Movies', value: 'movies'},
@@ -172,27 +226,65 @@ export default function App() {
 		}
 	};
 
+	const handleHighlight = (item: Item) => {
+		setHighlightedTab(item.value);
+	};
+
+	const handleNavSelect = (item: Item) => {
+		if (item.value === 'settings') {
+			setIsEditing(true);
+			setActiveTab(item.value);
+		} else if (item.value === 'shows') {
+			setIsEditing(true);
+			setActiveTab(item.value);
+		} else if (item.value === 'movies') {
+			setIsEditing(true);
+			setActiveTab(item.value);
+		}
+	};
+
 	const handleShowsSelect = (item: Item) => {
 		if (item.value === 'back') {
 			setIsEditing(false);
-			setActiveTab('shows'); // Default back to shows tab
-			navItems = [
-				{label: '📺 Shows', value: 'shows'},
-				{label: '🎬 Movies', value: 'movies'},
-				{label: '🔧  Settings', value: 'settings'},
-			]; // Restore original nav items
+			setActiveTab(''); // Default back to shows tab
+			// navItems = [
+			// 	{label: '📺 Shows', value: 'shows'},
+			// 	{label: '🎬 Movies', value: 'movies'},
+			// 	{label: '🔧  Settings', value: 'settings'},
+			// ]; // Restore original nav items
 		}
 	};
 
 	const handleMoviesSelect = (item: Item) => {
 		if (item.value === 'back') {
 			setIsEditing(false);
-			setActiveTab('shows'); // Default back to shows tab
-			navItems = [
-				{label: '📺 Shows', value: 'shows'},
-				{label: '🎬 Movies', value: 'movies'},
-				{label: '🔧  Settings', value: 'settings'},
-			]; // Restore original nav items
+			setEditingOutputPath(false);
+			setEditingVideoFormat(false);
+			setEditingShowFinalFolder(false);
+			setEditingMovieFinalFolder(false);
+			setEditingDiscDrive(false);
+			setEditingHandBrakePath(false);
+			setEditingMakeMKVPath(false);
+			setEditingMovieTitle(false);
+			setRippingMovie(false);
+			setActiveTab('movies'); // Default back to movies tab
+			// navItems = [
+			// 	{label: '📺 Shows', value: 'shows'},
+			// 	{label: '🎬 Movies', value: 'movies'},
+			// 	{label: '🔧  Settings', value: 'settings'},
+			// ]; // Restore original nav items
+		}
+		if (item.value === 'ripIT!') {
+			setRippingMovie(true);
+		}
+		if (item.label.includes('Movie Title')) {
+			setEditingMovieTitle(true);
+		}
+		if (item.label.includes('Movie Final Folder')) {
+			setEditingMovieFinalFolder(true);
+		}
+		if (item.label.includes('Movie Year')) {
+			setEditingMovieYear(true);
 		}
 	};
 
@@ -208,12 +300,12 @@ export default function App() {
 			setEditingMakeMKVPath(false);
 			setEditingMovieTitle(false);
 			setRippingMovie(false);
-			setActiveTab('shows'); // Default back to shows tab
-			navItems = [
-				{label: '📺 Shows', value: 'shows'},
-				{label: '🎬 Movies', value: 'movies'},
-				{label: '🔧  Settings', value: 'settings'},
-			]; // Restore original nav items
+			setActiveTab('shows'); // Default back to settings tab
+			// navItems = [
+			// 	{label: '📺 Shows', value: 'shows'},
+			// 	{label: '🎬 Movies', value: 'movies'},
+			// 	{label: '🔧  Settings', value: 'settings'},
+			// ]; // Restore original nav items
 		}
 		if (item.label.includes('Output Folder')) {
 			setEditingOutputPath(true);
@@ -248,36 +340,57 @@ export default function App() {
 		if (item.value === 'back') {
 			setIsEditing(false);
 			setActiveTab('shows'); // Default back to shows tab
-			navItems = [
-				{label: '📺 Shows', value: 'shows'},
-				{label: '🎬 Movies', value: 'movies'},
-				{label: '🔧  Settings', value: 'settings'},
-			]; // Restore original nav items
+			// navItems = [
+			// 	{label: '📺 Shows', value: 'shows'},
+			// 	{label: '🎬 Movies', value: 'movies'},
+			// 	{label: '🔧  Settings', value: 'settings'},
+			// ]; // Restore original nav items
 		}
 	};
 
 	const handleMoviesSubmit = (item: Item) => {
-		if (item.value === 'back') {
-			setIsEditing(false);
-			setActiveTab('movies'); // Default back to shows tab
-			navItems = [
-				{label: '📺 Shows', value: 'shows'},
-				{label: '🎬 Movies', value: 'movies'},
-				{label: '🔧  Settings', value: 'settings'},
-			]; // Restore original nav items
-		}
 		if (item.value === 'ripIT!') {
+			console.log('Starting ripping process...');
+
 			setRippingMovie(true);
-			openDisc(parseInt(discDrive));
+			ripDisc(
+				movieTitle,
+				movieYear,
+				discDrive,
+				makemkvPath,
+				handbrakePath,
+				outputPath,
+				videoFormat,
+				movieFinalLocation,
+			)
+				.then(() => {
+					// Handle completion
+				})
+				.catch(error => {
+					// Handle error
+					console.error('Error during ripping process:', error);
+					return (
+						<Box>
+							<Text color="red">
+								Error during ripping process: {error.message}
+							</Text>
+						</Box>
+					);
+				});
 		}
 		if (item.label.includes('Movie Title')) {
-			setEditingMovieTitle(true);
+			setMovieTitle(movieTitle); // Update state
+			setEditingMovieTitle(false);
 		}
 		if (item.label.includes('Movie Final Folder')) {
-			setEditingMovieFinalFolder(true);
+			setmovieFinalLocation(movieFinalLocation); // Update state
+			process.env[MOVIES_FINAL_PATH] = movieFinalLocation; // Update process.env for current session
+			saveToEnvFile(MOVIES_FINAL_PATH, movieFinalLocation); // Update .env.local
+			setEditingMovieFinalFolder(false);
 		}
 		if (item.label.includes('Movie Year')) {
-			setEditingMovieYear(true);
+			setMovieYear(movieYear); // Update state
+			setEditingMovieYear(false);
 		}
 	};
 
@@ -353,25 +466,6 @@ export default function App() {
 					console.error('Error opening disc:', error);
 				});
 		}
-		if (item.value === 'ripIT!') {
-			ripDisc(
-				movieTitle,
-				movieYear,
-				discDrive,
-				makemkvPath,
-				handbrakePath,
-				outputPath,
-				videoFormat,
-				movieFinalLocation,
-			)
-				.then(() => {
-					// Handle completion
-				})
-				.catch(error => {
-					// Handle error
-					console.error('Error during ripping process:', error);
-				});
-		}
 	};
 	return (
 		<Box flexDirection="row" padding={1} width="100%">
@@ -385,8 +479,14 @@ export default function App() {
 					<SelectInput
 						isFocused={!isEditing}
 						items={navItems}
-						onSelect={handleSelect}
+						onHighlight={handleHighlight}
+						onSelect={handleNavSelect}
 					/>
+				</Box>
+				<Box marginTop={1}>
+					<Text color="gray">
+						Use arrow keys to navigate. Press Enter to select.
+					</Text>
 				</Box>
 			</Box>
 
@@ -397,30 +497,55 @@ export default function App() {
 				paddingX={2}
 				flexDirection="column"
 			>
-				<Box flexDirection="column" flexGrow={1}>
-					{activeTab === 'shows' && (
-						<Box marginTop={1}>
-							<View
-								title="SHOWS"
-								color="rainbow"
-								desc="Ready to rip feature film..."
-							/>
+				<Box flexDirection="column" width="100%">
+					{activeTab === '' && (
+						<Box flexDirection="column" width="100%">
+							<View title="WELCOME TO DVD RIPPER CLI" color="atlas" desc="" />
+							<Text color="gray">
+								Select a tab from the left to get started.
+							</Text>
+						</Box>
+					)}
+					{isEditing && activeTab === 'shows' && (
+						<Box marginTop={1} flexDirection="column">
+							<Box flexDirection="column" width="100%">
+								<View
+									title="SHOWS"
+									color="rainbow"
+									desc="Ready to rip show..."
+								/>
+							</Box>
+							<Box marginBottom={1}>
+								<SelectInput
+									isFocused={activeTab === 'shows'}
+									items={[
+										{
+											label: 'Rip Show',
+											value: 'ripShow',
+										},
+										{label: '🔙 Back', value: 'back'},
+										// Add more show-related options here
+									]}
+									onSelect={handleShowsSelect}
+								/>
+							</Box>
 							<Text color="yellow">
 								⚠️ Show ripping is experimental. Use with caution.
 							</Text>
 						</Box>
 					)}
-					{activeTab === 'movies' && (
+
+					{/* MOVIES TAB */}
+					{isEditing && activeTab === 'movies' && (
 						<Box flexDirection="column" width="100%">
-							<Box
-								borderStyle="single"
-								justifyContent="center"
-								width="100%"
-								marginBottom={1}
-							>
-								<Text bold color="cyan">
-									{' '}
-									Movies{' '}
+							<Box marginBottom={1}>
+								<View
+									title="MOVIES"
+									color="retro"
+									desc="Ready to rip movie..."
+								/>
+								<Text color="yellow">
+									⚠️ Movie ripping is experimental. Use with caution.
 								</Text>
 							</Box>
 							{editingMovieTitle ? (
@@ -430,7 +555,7 @@ export default function App() {
 										value={movieTitle}
 										onChange={setMovieTitle}
 										onSubmit={() =>
-											handleSubmit({
+											handleMoviesSubmit({
 												label: `Movie Title: ${movieTitle}`,
 												value: movieTitle,
 											})
@@ -444,7 +569,7 @@ export default function App() {
 										value={movieYear}
 										onChange={setMovieYear}
 										onSubmit={() =>
-											handleSubmit({
+											handleMoviesSubmit({
 												label: `Movie Year: ${movieYear}`,
 												value: movieYear,
 											})
@@ -472,7 +597,7 @@ export default function App() {
 										value={videoFormat}
 										onChange={setVideoFormat}
 										onSubmit={() =>
-											handleSubmit({
+											handleMoviesSubmit({
 												label: `Video Format: ${videoFormat}`,
 												value: videoFormat,
 											})
@@ -486,17 +611,17 @@ export default function App() {
 										value={movieFinalLocation}
 										onChange={setmovieFinalLocation}
 										onSubmit={() =>
-											handleSubmit({
+											handleMoviesSubmit({
 												label: `Movie Final Folder: ${movieFinalLocation}`,
 												value: movieFinalLocation,
-											})										
+											})
 										}
 									/>
 								</Box>
 							) : rippingMovie ? (
 								<Box>
 									<Text color="green">Opening Disc in progress...</Text>
-									<RipMovie/>
+									<RipMovie />
 								</Box>
 							) : (
 								<SelectInput
@@ -518,7 +643,7 @@ export default function App() {
 										},
 										{label: '🔙 Back', value: 'back'},
 									]}
-									onSelect={handleMoviesSubmit}
+									onSelect={handleMoviesSelect}
 								/>
 							)}
 						</Box>
