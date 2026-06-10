@@ -9,6 +9,7 @@ import * as fs from 'node:fs';
 import path from 'path';
 import {openDisc, ripDisc} from './rip.js';
 import {parse} from 'node:path';
+import { index } from 'drizzle-orm/sqlite-core/indexes';
 
 const OUTPUT_FOLDER = 'OUTPUT_FOLDER';
 const VIDEO_FORMAT = 'VIDEO_FORMAT';
@@ -81,12 +82,14 @@ const saveToEnvFile = (key: string, value: string) => {
 
 function discContentHandler(discContent: string) {
 	return discContent.split('\n').map(line => {
-		const match = line.match(/^\s*Title\s+(\d+):\s+(.*)$/);
+		const match = line.includes("CINFO:");
 		if (match) {
-			const titleNumber = match[1];
-			const titleName = match[2];
-			console.log(`Title ${titleNumber}: ${titleName}`);
+			// const titleNumber = match[1];
+			// const titleName = match[2];
+			// console.log(`Title ${titleNumber}: ${titleName}`);
+			return line;
 		}
+		return null;
 	});
 }
 
@@ -171,8 +174,8 @@ export const RipMovie = () => {
 			<Text color="yellow">
 				This may take a while. Please wait. {handledDiscContent.length} titles found.
 			</Text>
-			<Text color="cyan">{handledDiscContent.map((content, index) => (
-				<Text key={index}>{content}</Text>
+			<Text color="cyan">{handledDiscContent.filter((x) => x !== null).map((content, index) => (
+				<Text key={index}>Lines: {content}</Text>
 			))}</Text>
 		</Box>
 	);

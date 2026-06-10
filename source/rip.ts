@@ -15,6 +15,7 @@ import fs from 'fs/promises';
 const envLocalPath = path.resolve(process.cwd(), '.env.local');
 // makemkvcon -r mkv disc:0 0 "G:/Video" && echo 'Ripping done!'
 // handbrake -i "G:/Video/A1_t00.mkv" -o "//TRUENAS/media/movies/Lady and the Tramp.mp4" --preset "Fast 1080p30"
+// "C:\Program Files (x86)\MakeMKV\makemkvcon64.exe"
 dotenv.config({path: envLocalPath});
 const execAsync = promisify(exec);
 const MAKEMKV_KEY = process.env[`MAKEMKV_KEY`]
@@ -22,7 +23,7 @@ const MAKEMKV_KEY = process.env[`MAKEMKV_KEY`]
 // export async function openDisc(discDrive: number): Promise<DiscInfo[]> {
 //    try {
 //         // --messages=-stdout forces the output to be readable
-//         const { stdout } = await execAsync(`"${MAKEMKV_KEY}" -r info disc:${discDrive}`);
+//         const { stdout } = await execAsync(`""/mnt/c/Program\ Files\ \(x86\)/MakeMKV/makemkvcon64.exe" -r info disc:${discDrive}" -r info disc:${discDrive}`);
 //         console.log(stdout);
         
 //         // Custom parsing logic based on makemkvcon output would go here
@@ -33,10 +34,10 @@ const MAKEMKV_KEY = process.env[`MAKEMKV_KEY`]
 //     }
 // }
 
-export async function openDisc(discDrive: number): Promise<string> {
+export async function openDisc(discDrive: number = 0): Promise<string> {
     try {
         // Double-check your MAKEMKV_KEY path variable
-        const { stdout } = await execAsync(`"${MAKEMKV_KEY}" -r info disc:${discDrive}`);
+        const { stdout } = await execAsync(`"/mnt/c/Program\ Files\ \(x86\)/MakeMKV/makemkvcon64.exe" -r info disc:${discDrive}`);
         
         // Return the raw stdout string for your handler to parse
         return stdout; 
