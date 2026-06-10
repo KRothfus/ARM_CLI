@@ -171,6 +171,9 @@ export const RipMovie = () => {
 			<Text color="yellow">
 				This may take a while. Please wait. {handledDiscContent.length} titles found.
 			</Text>
+			<Text color="cyan">{handledDiscContent.map((content, index) => (
+				<Text key={index}>{content}</Text>
+			))}</Text>
 		</Box>
 	);
 };
