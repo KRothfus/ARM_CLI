@@ -107,10 +107,10 @@ function findMovie(discContent: string): number {
 	for (const line of content) {
 		if (line === null) continue;
 		let sizeSplitLine = line.split(',');
-		const cleanSizeString = sizeSplitLine[3].replace(/"/g, '');
+		const cleanSizeString = sizeSplitLine[3].replace(/"/g, null).trim();
 		const sizeParts = cleanSizeString.split(' ');
 		const sizeValue = parseFloat(sizeParts[0]);
-		const unit = sizeParts[1] ? sizeParts[1].trim() : '';
+		const unit = sizeParts[1] ? sizeParts[1].trim() : null;
 		if (unit === 'MB') {
 			sizeArray.push(sizeValue / 1024);
 		} else if (unit === 'GB') {
@@ -191,8 +191,7 @@ export const RipDisc = ( {movieTitle, movieYear, discDrive, makemkvPath, handbra
 		<Box padding={1}>
 			<Text color="green">Disc Contents</Text>
 			<Text color="cyan">
-				{
-					handledDiscContent
+				movie found: { handledDiscContent
 					// .filter(x => x !== null)
 					// .map(content => (
 					// 	<Text>
