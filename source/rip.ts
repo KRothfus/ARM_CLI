@@ -50,12 +50,12 @@ export async function openDisc(discDrive: number = 0): Promise<string> {
     }
 }
 
-export async function ripDisc(movieTitle, movieYear, discDrive, makemkvPath, handbrakePath, outputPath, videoFormat, movieFinalLocation){
+export async function ripDisc(movieTitle: string, titleSelected: number, movieYear: number, discDrive: number, makemkvPath: string, handbrakePath: string, outputPath: string, videoFormat: string, movieFinalLocation: string) {
     try {
         const format = videoFormat.toLowerCase() === 'mkv' ? 'mkv' : 'mp4';
-        const commandRip = `${makemkvPath} mkv disc:${discDrive} 0 "${outputPath}" && echo 'Ripping done!'`;
+        const commandRip = `${makemkvPath} mkv disc:${discDrive} ${titleSelected} "${outputPath}" && echo 'Ripping done!'`;
         const { stdout, stderr } = await execAsync(commandRip);
-        const commandCompress = `${handbrakePath} -i "${outputPath}/A1_t00.mkv" -o "${movieFinalLocation}/${movieTitle} (${movieYear}).mp4" --preset "Fast 1080p30" && echo 'Compression done!'`;
+        const commandCompress = `${handbrakePath} -i "${outputPath}/${movieTitle}_t${titleSelected}.mkv" -o "${movieFinalLocation}/${movieTitle} (${movieYear}).mp4" --preset "Fast 1080p30" && echo 'Compression done!'`;
         const { stdout: compressStdout, stderr: compressStderr } = await execAsync(commandCompress);
         console.log('Rip Output:', stdout);
         return {stdout, compressStdout} ;

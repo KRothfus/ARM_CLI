@@ -9,7 +9,8 @@ import * as fs from 'node:fs';
 import path from 'path';
 import {openDisc, ripDisc} from './rip.js';
 import {parse} from 'node:path';
-import { index } from 'drizzle-orm/sqlite-core/indexes';
+import {index} from 'drizzle-orm/sqlite-core/indexes';
+import { title } from 'node:process';
 
 const OUTPUT_FOLDER = 'OUTPUT_FOLDER';
 const VIDEO_FORMAT = 'VIDEO_FORMAT';
@@ -82,7 +83,8 @@ const saveToEnvFile = (key: string, value: string) => {
 
 function discContentHandler(discContent: string) {
 	return discContent.split('\n').map(line => {
-		const match = line.includes("CINFO:");
+		const match = line.includes('CINFO:');
+		const titleMatch = line.includes('TINFO:');
 		if (match) {
 			// const titleNumber = match[1];
 			// const titleName = match[2];
@@ -93,44 +95,131 @@ function discContentHandler(discContent: string) {
 	});
 }
 
-// const RipMovie =  () => {
-// 	// Mark this callback as async to allow the use of await inside it
-// 	let handledDiscContent = [];
+function findMovie(discContent: string): number {
+	const content = discContent.split('\n').map(line => {
+		const match = line.match(/^TINFO:\d+,\d+,\d+,"[\d.]+\s[KMGT]?B"/);
+		if (match) {
+			return line;
+		}
+		return null;
+	});
+	const sizeArray: number[] = [];
+	for (const line of content) {
+		if (line === null) continue;
+		let sizeSplitLine = line.split(',');
+		const cleanSizeString = sizeSplitLine[3].replace(/"/g, '');
+		const sizeParts = cleanSizeString.split(' ');
+		const sizeValue = parseFloat(sizeParts[0]);
+		const unit = sizeParts[1] ? sizeParts[1].trim() : '';
+		if (unit === 'MB') {
+			sizeArray.push(sizeValue / 1024);
+		} else if (unit === 'GB') {
+			sizeArray.push(sizeValue);
+		} else if (unit === 'KB') {
+			sizeArray.push(sizeValue / (1024 * 1024));
+		}
+	}
+	if (sizeArray.length === 0) return -1;
+	const titleIndex = sizeArray.indexOf(Math.max(...sizeArray));
+	return titleIndex;
+}
 
-// 	const discContent =  openDisc(0).catch(error => {
-// 		console.error('Error opening disc:', error);
-// 	});
-
-// 	// const discContent = await openDisc(0).catch(error => {
-// 	// 	console.error('Error opening disc:', error);
-// 	// });
-
-// 	if (typeof discContent === 'string') {
-// 		handledDiscContent = discContentHandler(discContent);
-// 	}
-
-// 	return (
-// 		<Box flexDirection="column" padding={1}>
-// 			<Text color="green">Ripping in progress...</Text>
-// 			<Text color="yellow">
-// 				This may take a while. Please wait. {handledDiscContent} titles found.
-// 			</Text>
-// 		</Box>
-// 	);
-// };
-
-export const RipMovie = () => {
+export const RipDisc = ( {movieTitle, movieYear, discDrive, makemkvPath, handbrakePath, outputPath, videoFormat, movieFinalLocation}) => {
 	// 1. Manage your async data, loading state, and errors in state hooks
-	const [handledDiscContent, setHandledDiscContent] = useState<any[]>([]);
+	const [handledDiscContent, setHandledDiscContent] = useState<number>(0);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
+	const [count, setCount] = useState<number>(0);
 
 	// 2. Isolate the async operation inside useEffect so it runs exactly once
+
 	useEffect(() => {
 		const runDiscExtraction = async () => {
 			try {
 				setIsLoading(true);
-				
+
+				// Await the async data here safely
+				const discContent = await openDisc(0);
+
+				if (typeof discContent === 'string') {
+					const handled = findMovie(discContent);
+					setHandledDiscContent(handled);
+				}
+				await ripDisc(movieTitle, handledDiscContent, movieYear, parseInt(discDrive), makemkvPath, handbrakePath, outputPath, videoFormat, movieFinalLocation)
+			} catch (error) {
+				console.error('Error opening disc:', error);
+				setErrorMsg('Failed to read media disc container.');
+			} finally {
+				setIsLoading(false);
+			}
+		};
+
+		runDiscExtraction();
+	}, []); // Empty dependency array ensures this only executes on mount
+	useEffect(() => {
+		if (!isLoading) {
+			return () => {};
+		}
+		const interval = setInterval(() => {
+			setCount(prev => prev + 1);
+		}, 1000);
+
+		return () => clearInterval(interval);
+	}, [isLoading]);
+	// 3. Render a loading state while waiting for the Promise to resolve
+	if (isLoading) {
+		let frame = count % 3;
+		return (
+			<Box flexDirection="column" padding={1}>
+				<Text color="green">
+					🔍 Opening Disc{frame === 0 ? '.' : frame === 1 ? '..' : '...'}
+				</Text>
+			</Box>
+		);
+	}
+	// 4. Render an error screen if the extraction failed
+	if (errorMsg) {
+		return (
+			<Box flexDirection="column" padding={1}>
+				<Text color="red">❌ {errorMsg}</Text>
+			</Box>
+		);
+	}
+
+	// 5. Render your final output layout screen
+	return (
+		<Box padding={1}>
+			<Text color="green">Disc Contents</Text>
+			<Text color="cyan">
+				{
+					handledDiscContent
+					// .filter(x => x !== null)
+					// .map(content => (
+					// 	<Text>
+					// 		{content.trim()}
+					// 		{'\n'}
+					// 	</Text>
+					// ))
+				}
+			</Text>
+		</Box>
+	);
+};
+
+export const OpenDisc = () => {
+	// 1. Manage your async data, loading state, and errors in state hooks
+	const [handledDiscContent, setHandledDiscContent] = useState<any[]>([]);
+	const [isLoading, setIsLoading] = useState<boolean>(true);
+	const [errorMsg, setErrorMsg] = useState<string | null>(null);
+	const [count, setCount] = useState<number>(0);
+
+	// 2. Isolate the async operation inside useEffect so it runs exactly once
+
+	useEffect(() => {
+		const runDiscExtraction = async () => {
+			try {
+				setIsLoading(true);
+
 				// Await the async data here safely
 				const discContent = await openDisc(0);
 
@@ -148,16 +237,27 @@ export const RipMovie = () => {
 
 		runDiscExtraction();
 	}, []); // Empty dependency array ensures this only executes on mount
+	useEffect(() => {
+		if (!isLoading) {
+			return () => {};
+		}
+		const interval = setInterval(() => {
+			setCount(prev => prev + 1);
+		}, 1000);
 
+		return () => clearInterval(interval);
+	}, [isLoading]);
 	// 3. Render a loading state while waiting for the Promise to resolve
 	if (isLoading) {
+		let frame = count % 3;
 		return (
 			<Box flexDirection="column" padding={1}>
-				<Text color="yellow">🔍 Scanning disc drives, please wait...</Text>
+				<Text color="green">
+					🔍 Opening Disc{frame === 0 ? '.' : frame === 1 ? '..' : '...'}
+				</Text>
 			</Box>
 		);
 	}
-
 	// 4. Render an error screen if the extraction failed
 	if (errorMsg) {
 		return (
@@ -169,14 +269,18 @@ export const RipMovie = () => {
 
 	// 5. Render your final output layout screen
 	return (
-		<Box flexDirection="column" padding={1}>
-			<Text color="green">Ripping in progress...</Text>
-			<Text color="yellow">
-				This may take a while. Please wait. {handledDiscContent.length} titles found.
+		<Box padding={1}>
+			<Text color="green">Disc Contents</Text>
+			<Text color="cyan">
+				{handledDiscContent
+					.filter(x => x !== null)
+					.map(content => (
+						<Text>
+							{content.trim()}
+							{'\n'}
+						</Text>
+					))}
 			</Text>
-			<Text color="cyan">{handledDiscContent.filter((x) => x !== null).map((content, index) => (
-				<Text key={index}>Lines: {content}</Text>
-			))}</Text>
 		</Box>
 	);
 };
@@ -212,6 +316,7 @@ export default function App() {
 	const [rippingMovie, setRippingMovie] = useState(false);
 	const [editingMovieYear, setEditingMovieYear] = useState(false);
 	const [highlightedTab, setHighlightedTab] = useState('shows');
+	const [discOpen, setDiscOpen] = useState(false);
 
 	let navItems: Item[] = [
 		{label: '📺  Shows', value: 'shows'},
@@ -273,12 +378,16 @@ export default function App() {
 			setEditingMakeMKVPath(false);
 			setEditingMovieTitle(false);
 			setRippingMovie(false);
+			setDiscOpen(false);
 			setActiveTab('movies'); // Default back to movies tab
 			// navItems = [
 			// 	{label: '📺 Shows', value: 'shows'},
 			// 	{label: '🎬 Movies', value: 'movies'},
 			// 	{label: '🔧  Settings', value: 'settings'},
 			// ]; // Restore original nav items
+		}
+		if (item.value === 'openDisc') {
+			setDiscOpen(true);
 		}
 		if (item.value === 'ripIT!') {
 			setRippingMovie(true);
@@ -356,33 +465,8 @@ export default function App() {
 
 	const handleMoviesSubmit = (item: Item) => {
 		if (item.value === 'ripIT!') {
-			console.log('Starting ripping process...');
-
 			setRippingMovie(true);
-			ripDisc(
-				movieTitle,
-				movieYear,
-				discDrive,
-				makemkvPath,
-				handbrakePath,
-				outputPath,
-				videoFormat,
-				movieFinalLocation,
-			)
-				.then(() => {
-					// Handle completion
-				})
-				.catch(error => {
-					// Handle error
-					console.error('Error during ripping process:', error);
-					return (
-						<Box>
-							<Text color="red">
-								Error during ripping process: {error.message}
-							</Text>
-						</Box>
-					);
-				});
+			
 		}
 		if (item.label.includes('Movie Title')) {
 			setMovieTitle(movieTitle); // Update state
@@ -625,9 +709,21 @@ export default function App() {
 									/>
 								</Box>
 							) : rippingMovie ? (
-								<Box>
-									<Text color="green">Opening Disc in progress...</Text>
-									<RipMovie />
+								<Box flexDirection='column' width='100%'>
+									<RipDisc
+										movieTitle={movieTitle}
+										movieYear={movieYear}
+										discDrive={discDrive}
+										makemkvPath={makemkvPath}
+										handbrakePath={handbrakePath}
+										outputPath={outputPath}
+										videoFormat={videoFormat}
+										movieFinalLocation={movieFinalLocation}
+									/>''
+								</Box>
+							) : discOpen ? (
+								<Box flexDirection="column" width="100%">
+									<OpenDisc />
 								</Box>
 							) : (
 								<SelectInput
